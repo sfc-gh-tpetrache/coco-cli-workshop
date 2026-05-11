@@ -7,7 +7,7 @@ Build AI Agents and Predictive Workflows with Snowflake in 45-60 minutes.
 2. Create a Snowflake Intelligence (SI) agent
 3. Add a predictive signal (IS_FRAUD target)
 4. Validate with agent questions
-5. Run a Data Science workflow (train/evaluate model)
+5. (Optional) Run a Data Science workflow (train/evaluate model)
 
 ## Prerequisites
 - Cortex Code CLI installed
