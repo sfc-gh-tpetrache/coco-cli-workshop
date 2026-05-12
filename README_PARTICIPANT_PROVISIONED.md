@@ -77,6 +77,7 @@ Before starting, complete the following setup:
 You do NOT need any account-level CREATE privileges. Your assigned role (`<YOUR_ROLE>`) should already have, on your assigned schema (`<YOUR_DB>.<YOUR_SCHEMA>`):
 
 - `CREATE TABLE`, `CREATE VIEW`, `CREATE STAGE`, `CREATE FILE FORMAT`
+- `CREATE DYNAMIC TABLE` (backs the Cortex Search Service)
 - `CREATE SEMANTIC VIEW`
 - `CREATE CORTEX SEARCH SERVICE`
 - `CREATE AGENT`
@@ -85,6 +86,7 @@ Plus:
 
 - `USAGE` on `<YOUR_DB>` and `<YOUR_SCHEMA>`
 - `USAGE` on `<YOUR_WH>`
+- `EXECUTE TASK` and `EXECUTE MANAGED TASK` on the account (required for Cortex Search Service refresh)
 - The `SNOWFLAKE.CORTEX_USER` database role granted to `<YOUR_ROLE>` (see [Cortex User database role](https://docs.snowflake.com/en/user-guide/snowflake-cortex/aisql#cortex-user-database-role))
 
 If any step in this workshop fails with an "insufficient privileges" error, contact your workshop admin and reference the exact missing grant — do NOT switch to ACCOUNTADMIN or SYSADMIN.
@@ -460,6 +462,11 @@ SET WS_WH   = 'WORKSHOP_WH';
 CREATE ROLE IF NOT EXISTS IDENTIFIER($WS_ROLE);
 GRANT DATABASE ROLE SNOWFLAKE.CORTEX_USER TO ROLE IDENTIFIER($WS_ROLE);
 
+-- Required because Cortex Search Service creates an internal dynamic table
+-- whose refresh runs as a managed task
+GRANT EXECUTE TASK         ON ACCOUNT TO ROLE IDENTIFIER($WS_ROLE);
+GRANT EXECUTE MANAGED TASK ON ACCOUNT TO ROLE IDENTIFIER($WS_ROLE);
+
 -- Shared database
 CREATE DATABASE IF NOT EXISTS IDENTIFIER($WS_DB);
 GRANT USAGE ON DATABASE IDENTIFIER($WS_DB) TO ROLE IDENTIFIER($WS_ROLE);
@@ -493,11 +500,17 @@ GRANT CREATE TABLE,
       CREATE VIEW,
       CREATE STAGE,
       CREATE FILE FORMAT,
+      CREATE DYNAMIC TABLE,
       CREATE SEMANTIC VIEW,
       CREATE CORTEX SEARCH SERVICE,
       CREATE AGENT
   ON SCHEMA IDENTIFIER($FQ_SCHEMA)
   TO ROLE IDENTIFIER($WS_ROLE);
+
+-- Required so the Cortex Search Service's internal dynamic table can read
+-- the base table in a managed-access schema
+GRANT ALL ON ALL TABLES    IN SCHEMA IDENTIFIER($FQ_SCHEMA) TO ROLE IDENTIFIER($WS_ROLE);
+GRANT ALL ON FUTURE TABLES IN SCHEMA IDENTIFIER($FQ_SCHEMA) TO ROLE IDENTIFIER($WS_ROLE);
 
 -- Attach the shared role to this participant's user
 GRANT ROLE IDENTIFIER($WS_ROLE) TO USER IDENTIFIER($P_USER);
