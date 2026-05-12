@@ -11,15 +11,12 @@
 > - `<YOUR_WH>` — your assigned warehouse
 >
 > ```sql
-> SET YOUR_ROLE   = '<YOUR_ROLE>';
-> SET YOUR_DB     = '<YOUR_DB>';
-> SET YOUR_SCHEMA = '<YOUR_SCHEMA>';
-> SET YOUR_WH     = '<YOUR_WH>';
->
-> USE ROLE      IDENTIFIER($YOUR_ROLE);
-> USE WAREHOUSE IDENTIFIER($YOUR_WH);
-> USE SCHEMA    IDENTIFIER($YOUR_DB || '.' || $YOUR_SCHEMA);
+> USE ROLE      <YOUR_ROLE>;
+> USE WAREHOUSE <YOUR_WH>;
+> USE SCHEMA    <YOUR_DB>.<YOUR_SCHEMA>;
 > ```
+>
+> Substitute `<YOUR_ROLE>`, `<YOUR_WH>`, `<YOUR_DB>`, and `<YOUR_SCHEMA>` with the literal values your admin gave you. We use literal identifiers (not `IDENTIFIER($VAR)` with `||` concatenation) because (a) `IDENTIFIER()` does not support concatenation expressions, and (b) Cortex Code CLI executes each SQL statement in its own session, so `SET` variables do not persist across statements.
 >
 > Throughout this guide, every SQL example uses the placeholders `<YOUR_DB>` / `<YOUR_SCHEMA>` / `<YOUR_WH>` / `<YOUR_ROLE>`. Substitute them with your assigned values when copying SQL into prompts.
 
@@ -160,6 +157,11 @@ Use the following exact object names (the four placeholders below are pre-provis
 HARD RULES:
 - Do NOT emit CREATE DATABASE, CREATE SCHEMA, or CREATE WAREHOUSE statements anywhere.
 - All generated SQL must reference objects with the fully-qualified names above.
+- Every generated `.sql` file MUST start with these three literal USE statements (so the file is self-contained when Cortex Code CLI runs each statement in its own session):
+      USE ROLE <YOUR_ROLE>;
+      USE WAREHOUSE <YOUR_WH>;
+      USE SCHEMA <YOUR_DB>.<YOUR_SCHEMA>;
+- Do NOT use `IDENTIFIER($VAR)` with concatenation (e.g. `IDENTIFIER($DB || '.' || $SCHEMA)`) — `IDENTIFIER()` does not support concatenation expressions. Use literal fully-qualified names everywhere.
 
 ## TASK ORDER (follow exactly):
 
@@ -264,16 +266,11 @@ Now switch from generation to execution.
 > **Note:** Your admin has already created your role, database, schema, warehouse, and granted you the required in-schema privileges. Run only the following to point your session at them and create the stage + file format inside your assigned schema.
 
 ```text
-Run the following SQL in my current connection.
+Run the following SQL in my current connection. Substitute the four placeholders with the literal values your admin gave you.
 
-SET YOUR_ROLE   = '<YOUR_ROLE>';
-SET YOUR_DB     = '<YOUR_DB>';
-SET YOUR_SCHEMA = '<YOUR_SCHEMA>';
-SET YOUR_WH     = '<YOUR_WH>';
-
-USE ROLE      IDENTIFIER($YOUR_ROLE);
-USE WAREHOUSE IDENTIFIER($YOUR_WH);
-USE SCHEMA    IDENTIFIER($YOUR_DB || '.' || $YOUR_SCHEMA);
+USE ROLE      <YOUR_ROLE>;
+USE WAREHOUSE <YOUR_WH>;
+USE SCHEMA    <YOUR_DB>.<YOUR_SCHEMA>;
 
 -- Create the stage and file format inside YOUR pre-provisioned schema
 CREATE STAGE IF NOT EXISTS DATA_STAGE
@@ -288,7 +285,7 @@ CREATE FILE FORMAT IF NOT EXISTS CSVFORMAT
 
 -- Verify your session context and grants
 SELECT CURRENT_ROLE(), CURRENT_DATABASE(), CURRENT_SCHEMA(), CURRENT_WAREHOUSE();
-SHOW GRANTS TO ROLE IDENTIFIER($YOUR_ROLE);
+SHOW GRANTS TO ROLE <YOUR_ROLE>;
 ```
 
 > **Troubleshooting:** If `CREATE STAGE` or `CREATE FILE FORMAT` fails with an insufficient-privilege error, contact your workshop admin — your assigned role is missing the corresponding in-schema CREATE grant. Do NOT switch to SYSADMIN or ACCOUNTADMIN.
@@ -322,6 +319,9 @@ In my current connection, read and execute the contents of these local SQL files
 - Stage has the uploaded files (verify with `LIST @<YOUR_DB>.<YOUR_SCHEMA>.DATA_STAGE`)
 - Search service and agent report "created" with no errors
 - COPY INTO reports rows loaded (should be ~100 rows)
+- Run `SELECT CURRENT_ROLE();` and confirm it returns `<YOUR_ROLE>` (NOT `ACCOUNTADMIN`)
+
+> **Per-statement session note:** Cortex Code CLI executes each SQL statement in its own session, so a one-time `USE ROLE <YOUR_ROLE>` does not persist across `01..04` files. The generation prompt above already prepends the three required `USE` lines to every `.sql` file. If you authored your own ad-hoc SQL or see objects being created under `ACCOUNTADMIN`, prepend those three `USE` statements to the file or re-generate the SQL files.
 
 > **Troubleshooting:** If CREATE AGENT or CREATE CORTEX SEARCH SERVICE fails:
 > - Verify your account has Cortex features enabled
@@ -419,8 +419,8 @@ You've completed the workshop if you have:
 Drop only the objects YOU created inside your assigned schema. Your admin will drop the role, database, schema, and warehouse for you.
 
 ```sql
-USE ROLE   IDENTIFIER($YOUR_ROLE);
-USE SCHEMA IDENTIFIER($YOUR_DB || '.' || $YOUR_SCHEMA);
+USE ROLE   <YOUR_ROLE>;
+USE SCHEMA <YOUR_DB>.<YOUR_SCHEMA>;
 
 DROP AGENT                 IF EXISTS DEMO_AGENT;
 DROP CORTEX SEARCH SERVICE IF EXISTS TEXT_SEARCH;
